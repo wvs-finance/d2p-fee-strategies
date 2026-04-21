@@ -1,3 +1,99 @@
+P(t+1) = P(t) · exp(-σ²/2 + σZ); Z ~ N(0,1) => ( μ = 0, σ ~ U[0.088%, 0.101%])
+
+AMM(30), AMM(f)
+
+I_0 = (RX_0 = 100 X, RY_0 = 10,000 Y P_y/x_0 = 100).
+
+
+Uninformed<Volume>{
+   v (t+1) = int _{order} λ*OrderSize (Order) d order ; λ ~ U[0.6, 1.0], OrderSize ~ LogNormal(μ, σ=1.2)
+   Direction: 50% buy, 50% sell
+
+   - Retail flow splits optimally between AMMs based on fees—lower fees attract more volume.
+
+}
+
+
+Arbitrage<Volume> {
+     { P_{t}^{CPMM} < P_{t} }:{
+             BUY X FROM AMM;
+             OrderSize := { Δx = x - √(k/(γ·P(t))) }
+       };
+
+     { P_{t+1}^{CPMM} > P_{t} }:{
+           SELL X TO AMM;
+           OrderSize := { Δx_in = (√(k·γ/p) - x) / γ}
+
+     }
+    - Higher fees mean arbitrageurs need larger mispricings to profit, so your AMM stays "stale" longer—bad for edge.
+}
+
+
+OrderRouter (AMM(30), AMM(f); Volume) {
+    Δy₁ = (r (y₂ + (1-f2) Y) - y₁) / ((1-f1) + r (1-f2) )    where r = L^(1)/ L^(2)
+    s.t L^(i) = √(xᵢ (1- fi) yᵢ) 		
+
+
+    - Lower fees → larger γ → more flow. But the relationship is nonlinear—small fee differences can shift large fractions of
+    volume.
+
+    
+
+}
+
+Welfare  {
+   **Goal:**
+       Max ( Edge = Σ (amount_x × fair_price - amount_y)   for sells (AMM sells X)
+           + Σ (amount_y - amount_x × fair_price)   for buys  (AMM buys X)  )
+
+   **Means** Set a buy fee and a sell fee, and after every trade you can change what fees you're showing        the market.**
+
+    - Retail trades: Positive edge (you profit from the spread)
+	- Arbitrage trades: Negative edge (you lose to informed flow)
+Good strategies maximize retail edge while minimizing arb losses.
+
+}
+
+Why the Normalizer?
+
+
+Without competition, setting 10% fees would appear profitable—you'd capture huge spreads on the few trades that still execute. The normalizer prevents this: if your fees are too high, retail routes to the 30 bps AMM and you get nothing.
+
+The normalizer also means there's no "free lunch"—you can't beat 30 bps just by setting 29 bps. The optimal fee depends
+on market conditions.
+
+
+CPMM {
+   L ( x , y )  = x * y;
+   Δy = y - k/(x - Δx);
+
+   - Fees are taken on input: if fee is f, only (1-f) of the input affects reserves.
+
+
+}
+
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {AMMStrategyBase} from "./AMMStrategyBase.sol";
+import {TradeInfo} from "./IAMMStrategy.sol";
+
+contract Strategy is AMMStrategyBase {
+    function afterInitialize(uint256 initialX, uint256 initialY)
+        external override returns (uint256 bidFee, uint256 askFee);
+
+    function afterSwap(TradeInfo calldata trade)
+        external override returns (uint256 bidFee, uint256 askFee);
+
+    function getName() external pure override returns (string memory);
+}
+
+
+}
+
+
+
 # AMM Fee Strategy Challenge
 
 **https://ammchallenge.com**
